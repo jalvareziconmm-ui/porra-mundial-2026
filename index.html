@@ -172,9 +172,58 @@
       h1 { font-size: 32px; }
       .bet-form { grid-template-columns: 1fr; }
     }
+
+    .fixed-player {
+  position: fixed;
+  bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+.player-left {
+  left: 0;
+  width: 260px;
+  max-height: 82vh;
+}
+
+.player-right {
+  right: 0;
+  width: 300px;
+  max-height: 82vh;
+}
+
+.app-hero,
+.card {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 1000px) {
+  .fixed-player {
+    opacity: 0.22;
+  }
+
+  .player-left {
+    width: 190px;
+  }
+
+  .player-right {
+    width: 210px;
+  }
+}
+
+@media (max-width: 640px) {
+  .fixed-player {
+    display: none;
+  }
+}
   </style>
 </head>
 <body>
+  <img class="fixed-player player-left" src="messi-removebg-preview.png" alt="">
+  <img class="fixed-player player-right" src="oyarzabal-removebg-preview.png" alt="">
   <header class="app-hero">
     <div class="hero-bg">
       <img class="hero-logo" src="https://assets1.afa.com.ar/media/LUCAS-GAIO/Junio-2025/webfifa26.jpg" alt="FIFA World Cup 2026">
