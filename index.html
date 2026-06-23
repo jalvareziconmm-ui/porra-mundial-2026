@@ -239,6 +239,7 @@
     <p>Elige una sección:</p>
     <div class="nav-buttons">
       <button onclick="showSection('matches')">Calendario</button>
+      <button onclick="showSection('torneo')">Torneo</button>
       <button onclick="showSection('ranking')">Ranking</button>
       <button onclick="showSection('admin')">Admin</button>
       <button class="logout" onclick="logout()">Cerrar sesión</button>
@@ -255,8 +256,31 @@
     <input id="adminMaxGoleador" placeholder="Máximo goleador real/es, separados por coma">
     <input id="adminMaxAsistente" placeholder="Máximo asistente real/es, separados por coma">
     <button onclick="guardarResultadoAdmin()">Guardar resultado y cerrar partido</button>
+    <hr>
+    <h3>Resultado final del torneo</h3>
+    <input id="adminTorneoMejorJugador" placeholder="Mejor jugador del torneo">
+    <input id="adminTorneoBotaOro" placeholder="Bota de Oro / máximo goleador">
+    <input id="adminTorneoMejorJoven" placeholder="Mejor jugador joven">
+    <input id="adminTorneoRevelacion" placeholder="Selección revelación">
+    <input id="adminTorneoDecepcion" placeholder="Selección decepción">
+    <button onclick="guardarResultadosTorneoAdmin()">Guardar resultados finales del torneo</button>
+    <div id="adminTorneoMsg" class="msg"></div>
     <div id="adminMsg" class="msg"></div>
   </div>
+
+  <div id="torneoCard" class="card" style="display:none">
+  <h2>Apuestas de torneo</h2>
+  <p>Estas apuestas se puntuarán al final del Mundial.</p>
+
+  <input id="torneoMejorJugador" placeholder="Mejor jugador del torneo">
+  <input id="torneoBotaOro" placeholder="Bota de Oro / máximo goleador del Mundial">
+  <input id="torneoMejorJoven" placeholder="Mejor jugador joven">
+  <input id="torneoRevelacion" placeholder="Selección revelación">
+  <input id="torneoDecepcion" placeholder="Selección decepción">
+
+  <button onclick="guardarApuestaTorneoWeb()">Guardar apuesta de torneo</button>
+  <div id="torneoMsg" class="msg"></div>
+</div>
 
   <div id="rankingCard" class="card" style="display:none">
     <h2>Ranking</h2>
@@ -565,12 +589,18 @@
 
     function hidePrivateSections() {
       document.getElementById('matchesCard').style.display = 'none';
+      document.getElementById('torneoCard').style.display = 'none';
       document.getElementById('rankingCard').style.display = 'none';
       document.getElementById('adminCard').style.display = 'none';
     }
 
     function showSection(section) {
       hidePrivateSections();
+
+      if (section === 'torneo') {
+        document.getElementById('torneoCard').style.display = 'block';
+        cargarApuestaTorneo();
+      }
 
       if (section === 'matches') {
         document.getElementById('matchesCard').style.display = 'block';
@@ -629,6 +659,109 @@
           setMsg('rankingMsg', err.message, false);
         });
     }
+
+    function cargarApuestaTorneo() {
+  const usuario = getSesion();
+
+  if (!usuario) {
+    setMsg('torneoMsg', 'Debes iniciar sesión.', false);
+    return;
+  }
+
+  setMsg('torneoMsg', 'Cargando apuesta de torneo...', true);
+
+  apiCall('listarApuestaTorneo', {
+    id_usuario: usuario.id_usuario
+  })
+    .then(function (res) {
+      if (!res.ok) {
+        setMsg('torneoMsg', res.error, false);
+        return;
+      }
+
+      if (res.apuesta) {
+        document.getElementById('torneoMejorJugador').value = res.apuesta.mejor_jugador || '';
+        document.getElementById('torneoBotaOro').value = res.apuesta.bota_oro || '';
+        document.getElementById('torneoMejorJoven').value = res.apuesta.mejor_joven || '';
+        document.getElementById('torneoRevelacion').value = res.apuesta.seleccion_revelacion || '';
+        document.getElementById('torneoDecepcion').value = res.apuesta.seleccion_decepcion || '';
+        setMsg('torneoMsg', 'Apuesta de torneo cargada.', true);
+      } else {
+        setMsg('torneoMsg', 'Todavía no has guardado apuesta de torneo.', true);
+      }
+
+      if (res.cerrado) {
+        setMsg('torneoMsg', 'Las apuestas de torneo ya están cerradas.', false);
+      }
+    })
+    .catch(function (err) {
+      setMsg('torneoMsg', err.message, false);
+    });
+}
+
+function guardarApuestaTorneoWeb() {
+  const usuario = getSesion();
+
+  if (!usuario) {
+    setMsg('torneoMsg', 'Debes iniciar sesión.', false);
+    return;
+  }
+
+  const data = {
+    id_usuario: usuario.id_usuario,
+    mejor_jugador: document.getElementById('torneoMejorJugador').value,
+    bota_oro: document.getElementById('torneoBotaOro').value,
+    mejor_joven: document.getElementById('torneoMejorJoven').value,
+    seleccion_revelacion: document.getElementById('torneoRevelacion').value,
+    seleccion_decepcion: document.getElementById('torneoDecepcion').value
+  };
+
+  setMsg('torneoMsg', 'Guardando apuesta de torneo...', true);
+
+  apiCall('guardarApuestaTorneo', data)
+    .then(function (res) {
+      if (!res.ok) {
+        setMsg('torneoMsg', res.error, false);
+        return;
+      }
+
+      setMsg('torneoMsg', 'Apuesta de torneo guardada.', true);
+    })
+    .catch(function (err) {
+      setMsg('torneoMsg', err.message, false);
+    });
+}
+
+function guardarResultadosTorneoAdmin() {
+  const data = {
+    admin_password: document.getElementById('adminPassword').value,
+    mejor_jugador: document.getElementById('adminTorneoMejorJugador').value,
+    bota_oro: document.getElementById('adminTorneoBotaOro').value,
+    mejor_joven: document.getElementById('adminTorneoMejorJoven').value,
+    seleccion_revelacion: document.getElementById('adminTorneoRevelacion').value,
+    seleccion_decepcion: document.getElementById('adminTorneoDecepcion').value,
+    cerrado: 'SI'
+  };
+
+  setMsg('adminTorneoMsg', 'Guardando resultados finales...', true);
+
+  apiCall('guardarResultadosTorneo', data)
+    .then(function (res) {
+      if (!res.ok) {
+        setMsg('adminTorneoMsg', res.error, false);
+        return;
+      }
+
+      setMsg(
+        'adminTorneoMsg',
+        'Resultados de torneo guardados. Apuestas recalculadas: ' + res.apuestas_recalculadas,
+        true
+      );
+    })
+    .catch(function (err) {
+      setMsg('adminTorneoMsg', err.message, false);
+    });
+}
 
     const saved = localStorage.getItem('porra_usuario');
 
