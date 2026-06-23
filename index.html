@@ -253,6 +253,7 @@
     <input id="adminGolesVisitante" type="number" min="0" placeholder="Goles visitante real">
     <input id="adminMvp" placeholder="MVP real">
     <input id="adminMaxGoleador" placeholder="Máximo goleador real/es, separados por coma">
+    <input id="adminMaxAsistente" placeholder="Máximo asistente real/es, separados por coma">
     <button onclick="guardarResultadoAdmin()">Guardar resultado y cerrar partido</button>
     <div id="adminMsg" class="msg"></div>
   </div>
@@ -443,6 +444,7 @@
                 '<input id="gv_' + partido.id_partido + '" type="number" min="0" placeholder="' + partido.equipo_visitante + '" value="' + (apuesta.goles_visitante || '') + '">' +
                 '<input id="mvp_' + partido.id_partido + '" placeholder="MVP" value="' + (apuesta.mvp || '') + '">' +
                 '<input id="mg_' + partido.id_partido + '" placeholder="Máximo goleador/es, separados por coma" value="' + (apuesta.max_goleador || '') + '">' +
+                '<input id="ma_' + partido.id_partido + '" placeholder="Máximo asistente/s, separados por coma" value="' + (apuesta.max_asistente || '') + '">' +
                 '<button onclick="guardarApuestaWeb(&quot;' + partido.id_partido + '&quot;)">Guardar apuesta</button>' +
                 '<div id="msg_' + partido.id_partido + '" class="msg">' + (apuesta.id_apuesta ? 'Apuesta ya guardada.' : '') + '</div>' +
               '</div>';
@@ -476,7 +478,8 @@
         goles_local: document.getElementById('gl_' + idPartido).value,
         goles_visitante: document.getElementById('gv_' + idPartido).value,
         mvp: document.getElementById('mvp_' + idPartido).value,
-        max_goleador: document.getElementById('mg_' + idPartido).value
+        max_goleador: document.getElementById('mg_' + idPartido).value,
+        max_asistente: document.getElementById('ma_' + idPartido).value
       };
 
       setMsg('msg_' + idPartido, 'Guardando apuesta...', true);
@@ -532,6 +535,7 @@
         goles_visitante_real: document.getElementById('adminGolesVisitante').value,
         mvp_real: document.getElementById('adminMvp').value,
         max_goleador_real: document.getElementById('adminMaxGoleador').value,
+        max_asistente_real: document.getElementById('adminMaxAsistente').value,
         cerrado: 'SI'
       };
 
