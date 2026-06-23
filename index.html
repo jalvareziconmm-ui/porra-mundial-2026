@@ -319,31 +319,20 @@
     let jsonpCounter = 0;
 
     function apiCall(action, data) {
-      return new Promise(function (resolve, reject) {
-        const callbackName = 'porraCallback_' + Date.now() + '_' + (++jsonpCounter);
-        const script = document.createElement('script');
-        const params = new URLSearchParams({
-          action: action,
-          data: JSON.stringify(data || {}),
-          callback: callbackName,
-          cache: String(Date.now())
-        });
-
-        window[callbackName] = function (res) {
-          delete window[callbackName];
-          script.remove();
-          resolve(res);
-        };
-
-        script.onerror = function () {
-          delete window[callbackName];
-          script.remove();
-          reject(new Error('No se pudo conectar con la API.'));
-        };
-
-        script.src = API_URL + '?' + params.toString();
-        document.body.appendChild(script);
+      const params = new URLSearchParams({
+        action: action,
+        data: JSON.stringify(data || {}),
+        cache: String(Date.now())
       });
+    
+      return fetch(API_URL + '?' + params.toString())
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('Error HTTP ' + response.status);
+          }
+    
+          return response.json();
+        });
     }
 
     function setMsg(id, text, ok) {
