@@ -294,13 +294,25 @@
     <div id="matchesList"></div>
   </div>
 
-  <div id="loginCard" class="card">
-    <h2>Entrar</h2>
-    <input id="loginUsuario" placeholder="Usuario">
-    <input id="loginPassword" type="password" placeholder="Contraseña">
-    <button onclick="login()">Entrar</button>
-    <div id="loginMsg" class="msg"></div>
-  </div>
+<div id="loginCard" class="card">
+  <h2>Entrar</h2>
+  <input id="loginUsuario" placeholder="Usuario">
+  <input id="loginPassword" type="password" placeholder="Contraseña">
+  <button onclick="login()">Entrar</button>
+  <button class="secondary" onclick="toggleResetPassword()">Olvidé mi contraseña</button>
+  <div id="loginMsg" class="msg"></div>
+</div>
+
+<div id="resetPasswordCard" class="card" style="display:none">
+  <h2>Recuperar contraseña</h2>
+  <input id="resetUsuario" placeholder="Usuario">
+  <input id="resetEmail" type="email" placeholder="Email usado en el registro">
+  <input id="resetPassword1" type="password" placeholder="Nueva contraseña">
+  <input id="resetPassword2" type="password" placeholder="Repetir nueva contraseña">
+  <button onclick="resetPasswordWeb()">Actualizar contraseña</button>
+  <button class="logout" onclick="toggleResetPassword()">Cancelar</button>
+  <div id="resetPasswordMsg" class="msg"></div>
+</div>
 
   <div id="registerCard" class="card">
     <h2>Registrarse</h2>
@@ -354,6 +366,7 @@
       hidePrivateSections();
       document.getElementById('loginCard').style.display = 'block';
       document.getElementById('registerCard').style.display = 'block';
+      document.getElementById('resetPasswordCard').style.display = 'none';
     }
 
     function guardarSesion(usuario) {
@@ -749,6 +762,37 @@ function guardarResultadosTorneoAdmin() {
     })
     .catch(function (err) {
       setMsg('adminTorneoMsg', err.message, false);
+    });
+}
+
+    function toggleResetPassword() {
+  const card = document.getElementById('resetPasswordCard');
+  card.style.display = card.style.display === 'none' ? 'block' : 'none';
+}
+
+function resetPasswordWeb() {
+  const data = {
+    usuario: document.getElementById('resetUsuario').value,
+    email: document.getElementById('resetEmail').value,
+    nueva_password: document.getElementById('resetPassword1').value,
+    repetir_password: document.getElementById('resetPassword2').value
+  };
+
+  setMsg('resetPasswordMsg', 'Actualizando contraseña...', true);
+
+  apiCall('resetPasswordConEmail', data)
+    .then(function (res) {
+      if (!res.ok) {
+        setMsg('resetPasswordMsg', res.error, false);
+        return;
+      }
+
+      setMsg('resetPasswordMsg', 'Contraseña actualizada. Ya puedes iniciar sesión.', true);
+      document.getElementById('loginUsuario').value = data.usuario;
+      document.getElementById('loginPassword').value = '';
+    })
+    .catch(function (err) {
+      setMsg('resetPasswordMsg', err.message, false);
     });
 }
 
