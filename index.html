@@ -158,6 +158,52 @@
       color: #6b7280;
     }
 
+    .alias-button {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #1238f3;
+      font: inherit;
+      font-weight: bold;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .alias-button:hover {
+      text-decoration: underline;
+    }
+
+    .user-bets {
+      margin-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 16px;
+    }
+
+    .user-bet-row {
+      border-top: 1px solid #e5e7eb;
+      padding: 12px 0;
+    }
+
+    .user-bet-row:first-child {
+      border-top: 0;
+    }
+
+    .user-bet-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .user-bet-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px 12px;
+      font-size: 14px;
+    }
+
+    .user-bet-grid strong {
+      color: #166534;
+    }
+
     @media (max-width: 640px) {
       .hero-bg {
         flex-direction: column;
@@ -171,6 +217,7 @@
 
       h1 { font-size: 32px; }
       .bet-form { grid-template-columns: 1fr; }
+      .user-bet-grid { grid-template-columns: 1fr; }
     }
 
     .fixed-player {
@@ -286,6 +333,7 @@
     <h2>Ranking</h2>
     <div id="rankingMsg" class="msg">Ranking pendiente de cargar.</div>
     <div id="rankingList"></div>
+    <div id="rankingDetail" class="user-bets" style="display:none"></div>
   </div>
 
   <div id="matchesCard" class="card" style="display:none">
@@ -633,7 +681,10 @@
           }
 
           const list = document.getElementById('rankingList');
+          const detail = document.getElementById('rankingDetail');
           list.innerHTML = '';
+          detail.style.display = 'none';
+          detail.innerHTML = '';
 
           if (!res.ranking.length) {
             setMsg('rankingMsg', 'Todavía no hay puntuaciones.', true);
@@ -645,7 +696,12 @@
             row.className = 'ranking-row';
 
             row.innerHTML =
-              '<strong>' + item.posicion + '. ' + item.alias + '</strong>' +
+              '<strong>' +
+                item.posicion + '. ' +
+                '<button class="alias-button" onclick="verApuestasUsuario(&quot;' + item.id_usuario + '&quot;, &quot;' + item.alias.replace(/"/g, '&quot;') + '&quot;)">' +
+                  item.alias +
+                '</button>' +
+              '</strong>' +
               '<span>' + item.puntos + ' pts</span>' +
               '<small>' +
                 item.apuestas + ' apuestas · ' +
@@ -659,6 +715,61 @@
         })
         .catch(function (err) {
           setMsg('rankingMsg', err.message, false);
+        });
+    }
+
+    function verApuestasUsuario(idUsuario, alias) {
+      const detail = document.getElementById('rankingDetail');
+
+      detail.style.display = 'block';
+      detail.innerHTML = '<h3>Apuestas de ' + alias + '</h3><div class="msg ok">Cargando apuestas...</div>';
+
+      apiCall('listarApuestasUsuario', { id_usuario: idUsuario })
+        .then(function (res) {
+          if (!res.ok) {
+            detail.innerHTML =
+              '<h3>Apuestas de ' + alias + '</h3>' +
+              '<div class="msg error">' + res.error + '</div>';
+            return;
+          }
+
+          if (!res.apuestas.length) {
+            detail.innerHTML =
+              '<h3>Apuestas de ' + res.usuario.alias + '</h3>' +
+              '<div class="msg ok">No hay apuestas visibles todavía. Solo se muestran partidos cerrados.</div>';
+            return;
+          }
+
+          detail.innerHTML =
+            '<h3>Apuestas de ' + res.usuario.alias + '</h3>' +
+            '<p>Solo se muestran apuestas de partidos cerrados.</p>';
+
+          res.apuestas.forEach(function (apuesta) {
+            const row = document.createElement('div');
+            row.className = 'user-bet-row';
+
+            row.innerHTML =
+              '<div class="match-meta">' +
+                apuesta.fase + ' · ' + formatFecha(apuesta.fecha_hora) +
+              '</div>' +
+              '<div class="user-bet-title">' +
+                apuesta.equipo_local + ' vs ' + apuesta.equipo_visitante +
+              '</div>' +
+              '<div class="user-bet-grid">' +
+                '<div>Resultado: <strong>' + apuesta.goles_local + '-' + apuesta.goles_visitante + '</strong></div>' +
+                '<div>Puntos: <strong>' + (apuesta.puntos || '0') + '</strong></div>' +
+                '<div>MVP: <strong>' + apuesta.mvp + '</strong></div>' +
+                '<div>Máx. goleador: <strong>' + apuesta.max_goleador + '</strong></div>' +
+                '<div>Máx. asistente: <strong>' + apuesta.max_asistente + '</strong></div>' +
+              '</div>';
+
+            detail.appendChild(row);
+          });
+        })
+        .catch(function (err) {
+          detail.innerHTML =
+            '<h3>Apuestas de ' + alias + '</h3>' +
+            '<div class="msg error">' + err.message + '</div>';
         });
     }
 
