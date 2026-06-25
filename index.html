@@ -115,6 +115,21 @@
 
     .match:first-child { border-top: 0; }
 
+    .match-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 8px;
+    }
+
+    .match-filters button {
+      background: #6b7280;
+    }
+
+    .match-filters button.active {
+      background: #1238f3;
+    }
+
     .match-meta {
       color: #6b7280;
       font-size: 13px;
@@ -338,6 +353,12 @@
 
   <div id="matchesCard" class="card" style="display:none">
     <h2>Partidos</h2>
+    <div class="match-filters">
+      <button id="filter_today" class="active" onclick="cambiarFiltroPartidos('today')">Hoy</button>
+      <button id="filter_pending" onclick="cambiarFiltroPartidos('pending')">Pendientes</button>
+      <button id="filter_closed" onclick="cambiarFiltroPartidos('closed')">Cerrados</button>
+      <button id="filter_all" onclick="cambiarFiltroPartidos('all')">Todos</button>
+    </div>
     <div id="matchesMsg" class="msg"></div>
     <div id="matchesList"></div>
   </div>
@@ -376,6 +397,8 @@
   <script>
     const API_URL = 'https://porra-mundial-2026-api.jalvareziconmm.workers.dev/';
     let apuestasUsuario = {};
+    let partidosCache = [];
+    let filtroPartidos = 'today';
     let jsonpCounter = 0;
 
     function apiCall(action, data) {
@@ -487,6 +510,116 @@
       });
     }
 
+    function getFechaKey(value) {
+      if (!value) return '';
+
+      const raw = String(value);
+      const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+      if (match) {
+        return match[1] + '-' + match[2] + '-' + match[3];
+      }
+
+      const date = new Date(value);
+      if (isNaN(date.getTime())) return '';
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+
+      return year + '-' + month + '-' + day;
+    }
+
+    function getTodayKey() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+
+      return year + '-' + month + '-' + day;
+    }
+
+    function actualizarBotonesFiltro() {
+      ['today', 'pending', 'closed', 'all'].forEach(function (filter) {
+        const button = document.getElementById('filter_' + filter);
+        if (button) {
+          button.className = filter === filtroPartidos ? 'active' : '';
+        }
+      });
+    }
+
+    function filtrarPartidos(partidos) {
+      const todayKey = getTodayKey();
+
+      if (filtroPartidos === 'today') {
+        return partidos.filter(function (partido) {
+          return getFechaKey(partido.fecha_hora) === todayKey;
+        });
+      }
+
+      if (filtroPartidos === 'pending') {
+        return partidos.filter(function (partido) {
+          return String(partido.cerrado || 'NO').toUpperCase() !== 'SI';
+        });
+      }
+
+      if (filtroPartidos === 'closed') {
+        return partidos.filter(function (partido) {
+          return String(partido.cerrado || 'NO').toUpperCase() === 'SI';
+        });
+      }
+
+      return partidos;
+    }
+
+    function cambiarFiltroPartidos(filter) {
+      filtroPartidos = filter;
+      renderPartidos();
+    }
+
+    function renderPartidos() {
+      const list = document.getElementById('matchesList');
+      const partidos = filtrarPartidos(partidosCache);
+
+      actualizarBotonesFiltro();
+      list.innerHTML = '';
+
+      if (!partidos.length) {
+        const texto = filtroPartidos === 'today'
+          ? 'No hay partidos para apostar hoy. Puedes ver Pendientes o Todos.'
+          : 'No hay partidos en este filtro.';
+        setMsg('matchesMsg', texto, true);
+        return;
+      }
+
+      partidos.forEach(function (partido) {
+        const item = document.createElement('div');
+        item.className = 'match';
+        const apuesta = apuestasUsuario[partido.id_partido] || {};
+
+        item.innerHTML =
+          '<div class="match-meta">' +
+            partido.fase + ' · ' + formatFecha(partido.fecha_hora) +
+          '</div>' +
+          '<div class="match-title">' +
+            partido.equipo_local + ' vs ' + partido.equipo_visitante +
+          '</div>' +
+          '<div class="bet-form">' +
+            '<input id="gl_' + partido.id_partido + '" type="number" min="0" placeholder="' + partido.equipo_local + '" value="' + (apuesta.goles_local || '') + '">' +
+            '<input id="gv_' + partido.id_partido + '" type="number" min="0" placeholder="' + partido.equipo_visitante + '" value="' + (apuesta.goles_visitante || '') + '">' +
+            '<input id="mvp_' + partido.id_partido + '" placeholder="MVP" value="' + (apuesta.mvp || '') + '">' +
+            '<input id="mg_' + partido.id_partido + '" placeholder="Máximo goleador/es, separados por coma" value="' + (apuesta.max_goleador || '') + '">' +
+            '<input id="ma_' + partido.id_partido + '" placeholder="Máximo asistente/s, separados por coma" value="' + (apuesta.max_asistente || '') + '">' +
+            '<button onclick="guardarApuestaWeb(&quot;' + partido.id_partido + '&quot;)">Guardar apuesta</button>' +
+            '<div id="msg_' + partido.id_partido + '" class="msg">' + (apuesta.id_apuesta ? 'Apuesta ya guardada.' : '') + '</div>' +
+          '</div>';
+
+        list.appendChild(item);
+      });
+
+      setMsg('matchesMsg', 'Mostrando ' + partidos.length + ' de ' + partidosCache.length + ' partidos.', true);
+    }
+
     function cargarPartidos() {
       document.getElementById('matchesCard').style.display = 'block';
       setMsg('matchesMsg', 'Cargando partidos...', true);
@@ -498,35 +631,8 @@
             return;
           }
 
-          const list = document.getElementById('matchesList');
-          list.innerHTML = '';
-
-          res.partidos.forEach(function (partido) {
-            const item = document.createElement('div');
-            item.className = 'match';
-            const apuesta = apuestasUsuario[partido.id_partido] || {};
-
-            item.innerHTML =
-              '<div class="match-meta">' +
-                partido.fase + ' · ' + formatFecha(partido.fecha_hora) +
-              '</div>' +
-              '<div class="match-title">' +
-                partido.equipo_local + ' vs ' + partido.equipo_visitante +
-              '</div>' +
-              '<div class="bet-form">' +
-                '<input id="gl_' + partido.id_partido + '" type="number" min="0" placeholder="' + partido.equipo_local + '" value="' + (apuesta.goles_local || '') + '">' +
-                '<input id="gv_' + partido.id_partido + '" type="number" min="0" placeholder="' + partido.equipo_visitante + '" value="' + (apuesta.goles_visitante || '') + '">' +
-                '<input id="mvp_' + partido.id_partido + '" placeholder="MVP" value="' + (apuesta.mvp || '') + '">' +
-                '<input id="mg_' + partido.id_partido + '" placeholder="Máximo goleador/es, separados por coma" value="' + (apuesta.max_goleador || '') + '">' +
-                '<input id="ma_' + partido.id_partido + '" placeholder="Máximo asistente/s, separados por coma" value="' + (apuesta.max_asistente || '') + '">' +
-                '<button onclick="guardarApuestaWeb(&quot;' + partido.id_partido + '&quot;)">Guardar apuesta</button>' +
-                '<div id="msg_' + partido.id_partido + '" class="msg">' + (apuesta.id_apuesta ? 'Apuesta ya guardada.' : '') + '</div>' +
-              '</div>';
-
-            list.appendChild(item);
-          });
-
-          setMsg('matchesMsg', 'Total partidos: ' + res.partidos.length, true);
+          partidosCache = res.partidos;
+          renderPartidos();
         })
         .catch(function (err) {
           setMsg('matchesMsg', err.message, false);
