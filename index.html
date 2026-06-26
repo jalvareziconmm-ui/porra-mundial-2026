@@ -173,6 +173,20 @@
       color: #6b7280;
     }
 
+    .ranking-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .day-winner {
+      margin: 12px 0 16px;
+      border-top: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 14px 0;
+    }
+
     .alias-button {
       padding: 0;
       border: 0;
@@ -346,6 +360,10 @@
 
   <div id="rankingCard" class="card" style="display:none">
     <h2>Ranking</h2>
+    <div class="ranking-actions">
+      <button onclick="cargarGanadorDia()">Ganador del día</button>
+    </div>
+    <div id="rankingDayWinner" class="day-winner" style="display:none"></div>
     <div id="rankingMsg" class="msg">Ranking pendiente de cargar.</div>
     <div id="rankingList"></div>
     <div id="rankingDetail" class="user-bets" style="display:none"></div>
@@ -821,6 +839,57 @@
         })
         .catch(function (err) {
           setMsg('rankingMsg', err.message, false);
+        });
+    }
+
+    function cargarGanadorDia() {
+      const box = document.getElementById('rankingDayWinner');
+
+      box.style.display = 'block';
+      box.innerHTML = '<div class="msg ok">Calculando ganador del día...</div>';
+
+      apiCall('listarRankingDia')
+        .then(function (res) {
+          if (!res.ok) {
+            box.innerHTML = '<div class="msg error">' + res.error + '</div>';
+            return;
+          }
+
+          if (!res.ranking.length) {
+            box.innerHTML =
+              '<h3>Ganador del día</h3>' +
+              '<div class="msg ok">Todavía no hay partidos cerrados para calcularlo.</div>';
+            return;
+          }
+
+          const ganador = res.ranking[0];
+          const partidosTexto = res.partidos.map(function (partido) {
+            return partido.equipo_local + ' ' +
+              partido.goles_local_real + '-' +
+              partido.goles_visitante_real + ' ' +
+              partido.equipo_visitante;
+          }).join(' · ');
+
+          box.innerHTML =
+            '<h3>Ganador del día - ' + res.fecha + '</h3>' +
+            '<p><strong>' + ganador.alias + '</strong> va primero con <strong>' + ganador.puntos + ' pts</strong>.</p>' +
+            '<small>Calculado con: ' + partidosTexto + '</small>';
+
+          res.ranking.slice(0, 5).forEach(function (item) {
+            const row = document.createElement('div');
+            row.className = 'ranking-row';
+            row.innerHTML =
+              '<strong>' + item.posicion + '. ' + item.alias + '</strong>' +
+              '<span>' + item.puntos + ' pts</span>' +
+              '<small>' +
+                item.apuestas + ' apuestas · ' +
+                item.partidos_puntuados + ' puntuadas' +
+              '</small>';
+            box.appendChild(row);
+          });
+        })
+        .catch(function (err) {
+          box.innerHTML = '<div class="msg error">' + err.message + '</div>';
         });
     }
 
